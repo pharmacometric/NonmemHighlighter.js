@@ -1,47 +1,91 @@
 class NonmemHighlighter {
-    constructor() {
-        // Define color scheme
-        this.colors = {
-            comment: '#6a9955',
-            numeric: '#b5cea8',
-            controlRecord: '#569cd6',
-            advantTrans: '#4ec9b0',
-            recordName: '#9cdcfe',
-            string: '#ce9178',
-            keyword: '#c586c0',
-            parameter: '#dcdcaa',
-            reserved: '#ff6b6b'
-        };
-        
-        // Apply styles to document
-        this.applyStyles();
-        
-        // Define syntax patterns
-        this.patterns = [
-            // Comments
-            {
-                pattern: /;.*$/gm,
-                className: 'nm7-comment'
-            },
-            
-            // Control records ($DATA, $PROBLEM, etc.)
-            {
-                pattern: /\$[A-Za-z]+/g,
-                className: 'nm7-control-record'
-            },
-            
-            // ADVAN/TRANS routines
-            {
-                pattern: /\b(ADVAN\d+|TRANS\d+)\b/g,
-                className: 'nm7-advant-trans'
-            },
-            
-            // Reserved values with parentheses
-            {
-                pattern: /\b([A]\(\d+\)|ALAG\d+|[F]\d+|THETA\(\d+\)|ETA\(\d+\)|DADT\(\d+\)|EPS\(\d+\))/g,
-                className: 'nm7-reserved'
-            },
-            
-            // Record names (long list from grammar)
-            {
-                pattern: /\b(Q|CL|CL\d*|V\d*|KA\d*|V4IPRED|IWRES|NORESCALE|RESCALE|NPOPETAS|POPETAS|ONLYREAD|NCOMPARTMENTS|NCOMP|COMP|NCM|NCOMPS|NPARAMS|NEQUILIBRIUM|NPARAMETERS|COMPARTMENT|LINK|TO|AND|MARGINALS|ETAS|MSFO|RECOMPUTE|CONDITIONAL|UNCONDITIONAL|OMITTED|DIAGONAL|DIAG|BLOCK|FIXED|FIX|VARIANCE|STANDARD|SD|COVARIANCE|CORRELATION|CORRELATON|CORR|ALLOFFFIX|FIRSTFIXED|PRINCIPAL|UNIT|ORD0|ORDZERO|NOORD0|NOORDZERO|ABS0|ABZERO|ABSZERO|AB0|NOABS0|NOAB0|NOABZERO|NOABSZERO|FIRSTONLY|FIRSTRECONLY|FIRSTRECORDONLY|OBSONLY|FROM|CONDITIONAL|UNCONDITIONAL|VS|OMITTED|NORMAL|UNIFORM|NEW|NONP|NONPARAMETRIC|ONLYSIM|ONLYSIMULATION|REQUESTFIRST|REQUESTSECOND|PREDICTION|NOPREDICTION|TRUE|SUBPROBLEMS|SUBPROPS|NSUBPROBLEMS|NSUBPROBS|NSUB|SUBROUTINES|TOL|SCOPE|ITERATIONS|PRINT|NOPRINT|NITERATIONS|BY|FILE|NOHEADER|ONEHEADER|NOFORWARD|FORWARD|APPEND|NOAPPEND|NUMBERPOINTS|NUMBERPTS|NUMPOINTS|NUMPTS|ABORT|NOABORT|NOABORTFIRST|NRD|NONE|RESET|NORESET|WARNINGMAXIMUM|WARNMAXIMUM|WARN|WMAX|DATAMAXIMUM|DMAX|DATA|DMAXIMUM|ERRORMAXIMUM|ERRMAXIMUM|EMAX|COMRES|COMSAV|DERIV2|DES|ONLYTHETA|ONLY-THETA|ONLYETA|ONLY-ETA|ONLYSIGMA|ONLY-SIGMA|LEVEL|DEGREES|DOUBLESIDED|LEFTSIDED|RIGHTSIDED|DOUBLESIDE|LEFTSIDE|RIGHTSIDE|DOUBLE-SIDED|LEFT-SIDED|RIGHT-SIDED|DOUBLE-SIDE|LEFT-SIDE|RIGHT-SIDE|DATA|
+  constructor(options = {}) {
+    this.theme = options.theme || 'light';
+    this.showLineNumbers = options.lineNumbers || false;
+    this.styles = {
+      light: `
+        .nonmem-code { background: #fdfdfd; color: #000; padding: 1em; font-family: monospace; white-space: pre; display: block; overflow-x: auto; }
+        .nonmem-keyword { color: #0077aa; font-weight: bold; }
+        .nonmem-function { color: #9b59b6; }
+        .nonmem-operator { color: #e74c3c; }
+        .nonmem-comment { color: #7f8c8d; font-style: italic; }
+        .nonmem-constant { color: #d35400; }
+        .nonmem-number { color: #27ae60; }
+        .nonmem-line-number { color: #aaa; padding-right: 10px; user-select: none; }
+      `,
+      dark: `
+        .nonmem-code { background: #1e1e1e; color: #ccc; padding: 1em; font-family: monospace; white-space: pre; display: block; overflow-x: auto; }
+        .nonmem-keyword { color: #56b6c2; font-weight: bold; }
+        .nonmem-function { color: #c678dd; }
+        .nonmem-operator { color: #e06c75; }
+        .nonmem-comment { color: #5c6370; font-style: italic; }
+        .nonmem-constant { color: #d19a66; }
+        .nonmem-number { color: #98c379; }
+        .nonmem-line-number { color: #555; padding-right: 10px; user-select: none; }
+      `
+    };
+    this.injectStyles();
+  }
+
+  injectStyles() {
+    if (document.getElementById("nonmem-theme-style")) {
+      document.getElementById("nonmem-theme-style").remove();
+    }
+
+    const styleTag = document.createElement("style");
+    styleTag.id = "nonmem-theme-style";
+    styleTag.innerHTML = this.styles[this.theme];
+    document.head.appendChild(styleTag);
+  }
+
+  setTheme(theme) {
+    if (['light', 'dark'].includes(theme)) {
+      this.theme = theme;
+      this.injectStyles();
+    }
+  }
+
+  highlight(text) {
+    // Escape HTML
+    let html = text.replace(/</g, "&lt;").replace(/>/g, "&gt;");
+
+    // Apply regex-based transformations
+    html = html.replace(/;.*$/gm, match => `<span class="nonmem-comment">${match}</span>`);
+    html = html.replace(/\b(\$[A-Z]+)\b/g, match => `<span class="nonmem-keyword">${match}</span>`);
+    html = html.replace(/\b(EXP|LOG|IF|THEN|ELSE|ABS|SQRT|SIN|COS|TAN)\b(?=\()/g, match => `<span class="nonmem-function">${match}</span>`);
+    html = html.replace(/(ETA\(\d+\)|THETA\(\d+\)|ERR\(\d+\))/g, match => `<span class="nonmem-constant">${match}</span>`);
+    html = html.replace(/([=+\-*/^])/g, match => `<span class="nonmem-operator">${match}</span>`);
+    html = html.replace(/\b\d+\.\d+\b|\b\d+\b/g, match => `<span class="nonmem-number">${match}</span>`);
+
+    if (this.showLineNumbers) {
+      const lines = html.split('\n');
+      html = lines.map((line, idx) => `<span class="nonmem-line-number">${String(idx + 1).padStart(3)}.</span>${line}`).join('\n');
+    }
+
+    return `<code class="nonmem-code">${html}</code>`;
+  }
+
+  highlightElement(selector) {
+    const elements = document.querySelectorAll(selector);
+    elements.forEach(el => {
+      const raw = el.textContent;
+      el.innerHTML = this.highlight(raw);
+    });
+  }
+
+  observe(selector) {
+    const target = document.querySelector(selector);
+    if (!target) return;
+
+    const observer = new MutationObserver(() => {
+      this.highlightElement(selector + " code");
+    });
+
+    observer.observe(target, { childList: true, subtree: true });
+  }
+}
+
+// Export for module use
+if (typeof module !== 'undefined') {
+  module.exports = NonmemHighlighter;
+}
