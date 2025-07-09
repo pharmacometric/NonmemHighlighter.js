@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NONMEM Code Highlighter</title>
+    <style>
+        body {
+            font-family: 'Consolas', 'Monaco', 'Lucida Console', monospace;
+            background-color: #1e1e1e;
+            color: #d4d4d4;
+            margin: 0;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        h1 {
+            color: #569cd6;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        .code-block {
+            background-color: #2d2d30;
+            border: 1px solid #3e3e42;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+            overflow-x: auto;
+            white-space: pre;
+            font-size: 14px;
+        }
+        
+        /* NONMEM Syntax Highlighting */
+        .nm7-comment { color: #6a9955; font-style: italic; }
+        .nm7-numeric { color: #b5cea8; }
+        .nm7-control-record { color: #569cd6; font-weight: bold; }
+        .nm7-advant-trans { color: #4ec9b0; }
+        .nm7-record-name { color: #9cdcfe; }
+        .nm7-string { color: #ce9178; }
+        .nm7-keyword { color: #c586c0; }
+        .nm7-parameter { color: #dcdcaa; }
+        .nm7-reserved { color: #ff6b6b; font-weight: bold; }
+        
+        .demo-section {
+            margin: 40px 0;
+        }
+        
+        .demo-title {
+            color: #4ec9b0;
+            font-size: 18px;
+            margin-bottom: 10px;
+        }
+        
+        .controls {
+            text-align: center;
+            margin: 20px 0;
+        }
+        
+        button {
+            background-color: #0e639c;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            margin: 0 10px;
+        }
+        
+        button:hover {
+            background-color: #1177bb;
+        }
+        
+        textarea {
+            width: 100%;
+            height: 200px;
+            background-color: #2d2d30;
+            color: #d4d4d4;
+            border: 1px solid #3e3e42;
+            border-radius: 4px;
+            padding: 10px;
+            font-family: inherit;
+            font-size: 14px;
+            resize: vertical;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>NONMEM Code Highlighter</h1>
+        
+        <div class="demo-section">
+            <div class="demo-title">Example NONMEM Control Stream:</div>
+            <div class="code-block" id="example1"></div>
+        </div>
+        
+        <div class="demo-section">
+            <div class="demo-title">Try Your Own Code:</div>
+            <textarea id="userInput" placeholder="Enter your NONMEM code here..."></textarea>
+            <div class="controls">
+                <button onclick="highlightUserCode()">Highlight Code</button>
+                <button onclick="clearCode()">Clear</button>
+            </div>
+            <div class="code-block" id="userOutput"></div>
+        </div>
+    </div>
+
+    <script>
+        class NonmemHighlighter {
+            constructor() {
+                this.patterns = [
+                    // Comments
+                    {
+                        pattern: /;.*$/gm,
+                        className: 'nm7-comment'
+                    },
+                    
+                    // Control records ($DATA, $PROBLEM, etc.)
+                    {
+                        pattern: /\$[A-Za-z]+/g,
+                        className: 'nm7-control-record'
+                    },
+                    
+                    // ADVAN/TRANS routines
+                    {
+                        pattern: /\b(ADVAN\d+|TRANS\d+)\b/g,
+                        className: 'nm7-advant-trans'
+                    },
+                    
+                    // Reserved values with parentheses
+                    {
+                        pattern: /\b([A]\(\d+\)|ALAG\d+|[F]\d+|THETA\(\d+\)|ETA\(\d+\)|DADT\(\d+\)|EPS\(\d+\))/g,
+                        className: 'nm7-reserved'
+                    },
+                    
+                    // Record names (long list from grammar)
+                    {
+                        pattern: /\b(Q|CL|CL\d*|V\d*|KA\d*|V4IPRED|IWRES|NORESCALE|RESCALE|NPOPETAS|POPETAS|ONLYREAD|NCOMPARTMENTS|NCOMP|COMP|NCM|NCOMPS|NPARAMS|NEQUILIBRIUM|NPARAMETERS|COMPARTMENT|LINK|TO|AND|MARGINALS|ETAS|MSFO|RECOMPUTE|CONDITIONAL|UNCONDITIONAL|OMITTED|DIAGONAL|DIAG|BLOCK|FIXED|FIX|VARIANCE|STANDARD|SD|COVARIANCE|CORRELATION|CORRELATON|CORR|ALLOFFFIX|FIRSTFIXED|PRINCIPAL|UNIT|ORD0|ORDZERO|NOORD0|NOORDZERO|ABS0|ABZERO|ABSZERO|AB0|NOABS0|NOAB0|NOABZERO|NOABSZERO|FIRSTONLY|FIRSTRECONLY|FIRSTRECORDONLY|OBSONLY|FROM|CONDITIONAL|UNCONDITIONAL|VS|OMITTED|NORMAL|UNIFORM|NEW|NONP|NONPARAMETRIC|ONLYSIM|ONLYSIMULATION|REQUESTFIRST|REQUESTSECOND|PREDICTION|NOPREDICTION|TRUE|SUBPROBLEMS|SUBPROPS|NSUBPROBLEMS|NSUBPROBS|NSUB|SUBROUTINES|TOL|SCOPE|ITERATIONS|PRINT|NOPRINT|NITERATIONS|BY|FILE|NOHEADER|ONEHEADER|NOFORWARD|FORWARD|APPEND|NOAPPEND|NUMBERPOINTS|NUMBERPTS|NUMPOINTS|NUMPTS|ABORT|NOABORT|NOABORTFIRST|NRD|NONE|RESET|NORESET|WARNINGMAXIMUM|WARNMAXIMUM|WARN|WMAX|DATAMAXIMUM|DMAX|DATA|DMAXIMUM|ERRORMAXIMUM|ERRMAXIMUM|EMAX|COMRES|COMSAV|DERIV2|DES|ONLYTHETA|ONLY-THETA|ONLYETA|ONLY-ETA|ONLYSIGMA|ONLY-SIGMA|LEVEL|DEGREES|DOUBLESIDED|LEFTSIDED|RIGHTSIDED|DOUBLESIDE|LEFTSIDE|RIGHTSIDE|DOUBLE-SIDED|LEFT-SIDED|RIGHT-SIDED|DOUBLE-SIDE|LEFT-SIDE|RIGHT-SIDE|DATA|SPECIAL|MATRIX|PRINT|COMPRESS|CONFIDENCE|NOCONFIDENCE|SLOW|NOSLOW|CONDITIONAL|COND|IGNORE|NULL|RECORDS|NRECS|RECS|NRECORDS|LRECL|ACCEPT|NOWIDE|WIDE|REWIND|NOREWIND|CHECKOUT|CHECKDATA|NOOPEN|LAST20|TRANSLATE|METHOD|METH|INTER|INTERACTION|NOINTER|NOINTERACTION|LAPLACIAN|LAPLACE|NOLAPLACIAN|NOLAPLACE|PREDICTION|LIKELIHOOD|-2LOGLIKELIHOOD|-2LL|-2LLIKELIHOOD|FO|NOFO|CENTERING|CENTER|NOCENTERING|STIELTJES|GRID|NUMERICAL|NONUMERICAL|ZERO|POSTHOC|NOPOSTHOC|SIGDIGITS|SIGDIG|NSIG|SIG|NSIGDIGITS|NSIGDIGS|NSIGDIG|MAXEVALS|MAXEVAL|MSFO|ABORT|NOABORT|NOREPEAT|REPEAT|NOREPEAT1|REPEAT1|NOREPEAT2|REPEAT2|NOETABARCHECK|ETABARCHECK|NSPOP|F_FLAG|PHI|NOSORT|SORT|THETABOUNDTEST|NOTHETABOUNDTEST|OMEGABOUNDTEST|NOOMEGABOUNDTEST|SIGMABOUNDTEST|NOSIGMABOUNDTEST|NOPRIOR|SIGL|NITER|ISAMPLE|ISAMPLE_M1|ISAMPLE_M2|ISAMPLE_M3|IACCEPT|DF|EONLY|NBURN|PSAMPLE_M1|PSAMPLE_M2|PSAMPLE_M3|PACCEPT|OSAMPLE_M1|OSAMPLE_M2|OSAMPLE_M3|OACCEPT|MUM|GRD|CTYPE|NTERVAL|CITER|CALPHA|FORMAT|NOTITLE|NOLABEL|ITS|IMPLICIT|IMPMAP|SAEM|BAYES|CHAIN|TNPRI|IFND|CTLO|CTLW|DCTLO|DCTLW|DDCTLO|DDCTLW|CTUP|DCTUP|DDCTUP|NPRED|NRES|RES|PREDI|RESI|WRESI|CPRED|CRES|CWRES|CPREDI|CRESI|CWRESI|EPRED|IRES|ERES|EWRES|NPDE|ECWRES|ESAMPLE|DEN_|CDEN_)\b/g,
+                        className: 'nm7-record-name'
+                    },
+                    
+                    // String constants
+                    {
+                        pattern: /\b(INITIALOFF|NOOFF|NODOSE|EQUILIBRIUM|EXCLUDE|DEFOBSERVATION|DEFDOSE|DEFDOS|CENT|CENTRAL|DEFOBS|DEPOT|SAME|INITIAL|FINAL|PRIOR|NO|NOCOMMON|FULL|COMPACT|ZERO|CONDITIONAL|HYBRID|SS1|SS2|SS3|SS4|SS5|SS6|SS7|SS8|SS9|SS10|SS11|SS12)\b/g,
+                        className: 'nm7-string'
+                    },
+                    
+                    // Parameters and keywords
+                    {
+                        pattern: /\b(ALPHA|AOB|BETA|D1|D2|D3|D4|F1|F2|F3|F4|FO|GAMMA|K|K12|K13|K21|K23|K24|K31|K32|K42|KA|KM|Km0|Kmn|Q|Q2|Q3|Q4|R1|R2|R3|R4|S0|S1|S2|S3|S4|SC|TSCALE|VM|VSS|XSCALE|ADDL|AMT|CALL|CMT|COM|CONT|DAT1|DAT2|DAT3|DATE|DOSE|DROP|DV|ERR|EVID|F|ICALL|ID|II|INIT|L1|L2|LAST|MDV|MRG_|NEXT|P|PCMT|PRED|RATE|RAW_|RES|RPT_|SKIP|SS|TIME|VA_1|VA_2|VA_3|VA_4|VA_5|VA_6|VA_7|VA_8|VA_9|VB_1|VB_2|VB_3|VB_4|VB_5|VB_6|VB_7|VB_8|VB_9|VC_1|VC_2|VC_3|VC_4|VC_5|VC_6|VC_7|VC_8|VC_9|VECTRA|VECTRB|VECTRC|WRES|Y|A_0|A_0FLG|COM|COMSAV|CTLO|CTUP|DCTLO|DCTUP|DDCTLO|DDCTUP|DOSREC|DOSTIM|ETEXT|GETETA|I_REC|IERC|IERE|IERPRD|INDR1|INDR2|IPROB|IREP|ISFINL|MFIRST|MIXEST|MIXNUM|MIXP|MNEXT|MNOW|MPAST|MSEC|MTDIFF|MTIME|NDREC|NETEXT|NEWIND|NEWL2|NINDR|NIREC|NPROB|NREP|NWIND|OBJECT|OMEGAF|PRDFL|RPTI|RPTO|RPTON|S1IT|S1NIT|S1NUM|S2IT|S2NIT|S2NUM|SEOMEG|SESIGM|SETHET|SIGMAF|SIMEPS|SIMETA|SKIP_|TEMPLT|THETAF|TSTATE|YLO|YUP|ADVAN|AES|CCONTR|CCRIT|CONTR|DES|ERROR|INFN|INLETA|MIX|MODEL|OTHER|PK|PRED|PRIOR|SPTWO|SS|TOL|TRANS|USMETA)\b/g,
+                        className: 'nm7-keyword'
+                    },
+                    
+                    // FORTRAN keywords and functions
+                    {
+                        pattern: /\b(CALL|CALLFL|DO|ELSE|ELSEIF|ENDIF|\.EQ\.|EXIT|\.GE\.|\.GT\.|IF|\.LE\.|\.LT\.|\.NE\.|MODE|\.OR\.|\.AND\.|\.TRUE\.|\.FALSE\.|PASS|RANDOM|RETURN|SIMEPS|SIMETA|SQRT|SUPP|THEN|WHILE|ABS|ACOS|AIMAG|AINT|ALOG|ALOG10|AMAX0|AMAX1|AMIN0|AMIN1|AMOD|AND|ANINT|ASIN|ATAN|ATAN2|BACKSPACE|BLOCK|CABS|CALL|CCOS|CEXP|CHAR|CHARACTER|CLOG|CLOSE|CMPLX|COMMON|COMPLEX|CONJG|CONTINUE|COS|COSH|CSIN|CSQRT|DABS|DACOS|DASIN|DATA|DATAN|DATAN2|DBLE|DCOS|DCOSH|DDIM|DEXP|DIM|DIMENSION|DINT|DLOG|DMAX1|DMIN1|DMOD|DNINT|DO|DOUBLE|DPROD|DSIGN|DSIN|DSINH|DSQRT|DTAN|DTANH|ELSE|ELSEIF|END|ENDFILE|ENDIF|ENTRY|EQ|EQUIVALENCE|ERR|EXIT|EXP|EXTERNAL|FALSE|FILE|FLOAT|FORMAT|FUNCTION|GE|GOTO|GT|IABS|ICHAR|IDIM|IDINT|IDNINT|IF|IFIX|IMPLICIT|INDEX|INQUIRE|INTEGER|INTRINSIC|IOSTAT|ISIGN|LE|LEN|LGE|LGT|LLE|LLT|LOG|LOG10|LOGICAL|LT|MAX|MAX0|MAX1|MIN|MIN0|MIN1|MOD|NE|NINT|NOT|OPEN|OR|PARAMETER|PAUSE|PRECISION|PRINT|PROGRAM|READ|REAL|REAL|RETURN|REWIND|SAVE|SIGN|SIN|SINH|SNGL|SQRT|STATUS|STOP|SUBROUTINE|TAN|TANH|THEN|TRUE|UNIT|WRITE|BTEST|CDABS|CDCOS|CDEXP|CDLOG|CDSIN|CDSQRT|COTAN|DCMPLX|DCONJG|DCOTAN|DIMAG|DREAL|EOF|ETDAT|GETDAT|GETTIM|HFIX|IAND|IBCHNG|IBCLR|IBSET|IEOR|IMAG|INT|INT1|INT2|INT4|INTC|INTERFACE|IOR|ISHA|ISHC|ISHFT|ISHL|JFIX|LACFAR|LOC|LOCKING|LOCNEAR|NOT|SETTIM)\b/g,
+                        className: 'nm7-parameter'
+                    },
+                    
+                    // Numeric constants
+                    {
+                        pattern: /\b\d+(\.\d+)?([eE][+-]?\d+)?\b/g,
+                        className: 'nm7-numeric'
+                    }
+                ];
+            }
+            
+            highlight(code) {
+                let highlightedCode = code;
+                
+                // Apply patterns in order
+                this.patterns.forEach(pattern => {
+                    highlightedCode = highlightedCode.replace(pattern.pattern, (match) => {
+                        return `<span class="${pattern.className}">${match}</span>`;
+                    });
+                });
+                
+                return highlightedCode;
+            }
+            
+            highlightElement(element) {
+                const code = element.textContent || element.innerText;
+                element.innerHTML = this.highlight(code);
+            }
+        }
+        
+        // Initialize highlighter
+        const highlighter = new NonmemHighlighter();
+        
+        // Example NONMEM code
+        const exampleCode = `$PROBLEM 1 CMT ORAL DOSING
+$DATA data.csv IGNORE=@
+$INPUT ID TIME AMT DV EVID MDV CMT
+$SUBROUTINES ADVAN2 TRANS2
+$PK
+; Full relationships
+CL = TVCL*(WT/73.10)**0.75*EXP(ETA(1))  ; Median Weight
+V2 = TVV2*(WT/73.10)**1.0*EXP(ETA(2))
+Q  = TVQ*(WT/73.10)**0.75*EXP(ETA(3))
+KA = TVKA*EXP(ETA(4))
+V3 = TVV3*(WT/73.10)**1.0*EXP(ETA(5))
+ALAG1= TVALAG*EXP(ETA(6))
+F1 = TVF1*EXP(ETA(7))
+
+; #### rate constants ####
+K20 = CL/V2
+K23 = Q/V2
+K32 = Q/V3
+S2 = V2/1000
+
+$ERROR
+  IPRED = LOG(.0025)
+  IF(F.GT.0) IPRED = LOG(F)
+  IRES  = IPRED-DV
+  IWRES = IRES/W
+  Y     = IPRED+ERR(1)*W
+
+$THETA  (0,39.5527) ; 1 CL
+$THETA  (0,21.0651) ; 2 V1
+$THETA  (0,8.66472) ; 3 K0
+$THETA  (0,52.6265) ; 4 V2
+$THETA  (0,61.5643) ; 5 V2
+$THETA  (0,8.404399) ; 6 Q
+$THETA  (0,0.251992) ; 7 ALAG
+$THETA  (0,1) FIX ; 8 F1
+$THETA  (0,1) ; CLRACE
+$THETA  (0,1) ; CLSEX
+$THETA  (0,1) ; VRACE
+$THETA  (0,1) ; VSEX
+$THETA  (0,1) ; FISEX
+$THETA  (0,1) ; FIRACE
+$OMEGA  BLOCK(2)
+ 0.101796
+ 0.0983332 1.25485  ; IIV (CL-V)`;
+        
+        // Highlight the example code
+        document.getElementById('example1').innerHTML = highlighter.highlight(exampleCode);
+        
+        // Functions for interactive highlighting
+        function highlightUserCode() {
+            const userInput = document.getElementById('userInput').value;
+            const output = document.getElementById('userOutput');
+            
+            if (userInput.trim()) {
+                output.innerHTML = highlighter.highlight(userInput);
+            } else {
+                output.innerHTML = '<span class="nm7-comment">; Enter some NONMEM code above to see syntax highlighting</span>';
+            }
+        }
+        
+        function clearCode() {
+            document.getElementById('userInput').value = '';
+            document.getElementById('userOutput').innerHTML = '';
+        }
+        
+        // Initial setup
+        document.getElementById('userOutput').innerHTML = '<span class="nm7-comment">; Enter some NONMEM code above to see syntax highlighting</span>';
+        
+        // Add event listener for real-time highlighting
+        document.getElementById('userInput').addEventListener('input', highlightUserCode);
+    </script>
+</body>
+</html>
